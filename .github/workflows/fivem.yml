@@ -29,7 +29,7 @@ jobs:
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: Luxxy-GF
+          username: l-404-l
           password: ${{ secrets.REGISTRY_TOKEN }}
       -
         name: Build and push
@@ -40,4 +40,4 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/luxxy-gf/pterodactyl-fivem:latest
+            ghcr.io/l-404-l/pterodactyl-fivem:latest
