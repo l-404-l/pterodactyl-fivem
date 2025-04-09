@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 
-LABEL org.opencontainers.image.source https://github.com/Luxxy-GF/pterodactyl-fivem
+LABEL org.opencontainers.image.source https://github.com/l-404-l/pterodactyl-fivem
 
 RUN apt-get update && apt upgrade -y && apt-get install -y \
     build-essential \
