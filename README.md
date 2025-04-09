@@ -1,4 +1,5 @@
 # Pterodactyl-FiveM
+This is an edit to https://github.com/Luxxy-GF/pterodactyl-fivem
 
 ## Feature Plans
 I plan on supporting [Pelican](https://pelican.dev) and [Pterodactyl](https://pterodactyl.io) simultaneously when Pelican's first stable release comes out. There will be two eggs to support this. :)
@@ -7,7 +8,7 @@ I plan on supporting [Pelican](https://pelican.dev) and [Pterodactyl](https://pt
 This script installs FiveM on a Debian 12 server. It installs the latest version of FiveM and automatically keeps it updated. It also installs the latest version of FXServer.
 
 ## Installation
-1. Download the egg from the [Releases](https://github.com/Luxxy-GF/pterodactyl-fivem/releases/latest).
+1. Download the egg from the [Releases](https://github.com/l-404-l/pterodactyl-fivem/releases/latest).
 2. Upload the egg to your panel.
 3. Create a new server and select the FiveM egg.
 4. Start the server and wait for it to install.
