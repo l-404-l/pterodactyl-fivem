@@ -2,7 +2,7 @@ FROM debian:bookworm-slim
 
 LABEL org.opencontainers.image.source https://github.com/l-404-l/pterodactyl-fivem
 
-ENV TZ=America/New_York
+ENV TZ=${TZ}
 
 RUN apt-get update && apt upgrade -y && apt-get install -y \
     build-essential \
