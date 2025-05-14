@@ -2,6 +2,8 @@ FROM debian:bookworm-slim
 
 LABEL org.opencontainers.image.source https://github.com/l-404-l/pterodactyl-fivem
 
+ENV TZ=America/New_York
+
 RUN apt-get update && apt upgrade -y && apt-get install -y \
     build-essential \
     curl \
@@ -14,8 +16,9 @@ RUN apt-get update && apt upgrade -y && apt-get install -y \
     liblua5.3-0 \
     libz-dev \
     tzdata \
+    && ln -sf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
-
 
 RUN useradd -m -d /home/container container
 
