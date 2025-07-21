@@ -11,9 +11,6 @@ Text="${GREEN}[STARTUP]${NC}"
 echo -e "${Text} ${BLUE}Installing dependencies...${NC}"
 apt update -y && apt install -y tar xz-utils curl git file jq unzip
 
-# ========== Setup Directory ==========
-mkdir -p /mnt/server
-cd /mnt/server
 
 # ========== Fetch Artifact Page ==========
 RELEASE_PAGE=$(curl -sSL "https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/?$RANDOM")
