@@ -31,7 +31,8 @@ fi
 # Networking
 export TXHOST_TXA_PORT="${TXADMIN_PORT:-40120}"
 export TXHOST_INTERFACE="${TXADMIN_INTERFACE:-0.0.0.0}"
-export TXHOST_FXS_PORT="${SERVER_PORT:-30120}"
+# Use Pterodactyl allocated port (SERVER_PORT is set by Pterodactyl from allocation)
+export TXHOST_FXS_PORT="${SERVER_PORT:-${P_SERVER_PORT:-30120}}"
 export TXHOST_TXA_URL="http://${SERVER_IP}:${TXADMIN_PORT:-40120}"
 
 # Provider (GSP branding)
