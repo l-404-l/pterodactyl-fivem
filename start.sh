@@ -15,18 +15,41 @@ if [ -n "${TIMEZONE}" ]; then
     echo "* Timezone: ${TZ}"
 fi
 
-# txAdmin Environment Variables (new TXHOST format)
-export TXHOST_DATA_PATH="/home/container"
-export TXHOST_PORT="${TXADMIN_PORT:-40120}"
-export TXHOST_INTERFACE="${TXADMIN_INTERFACE:-0.0.0.0}"
-export TXHOST_FXSERVER_PORT="${SERVER_PORT:-30120}"
-export TXHOST_PUBLIC_URL="http://${SERVER_IP}:${TXADMIN_PORT:-40120}"
-export TXHOST_PROVIDER_NAME="${TXADMIN_PROVIDER_NAME:-Pterodactyl}"
-export TXHOST_PROVIDER_LOGO_URL="${TXADMIN_PROVIDER_LOGO}"
-export TXHOST_SERVER_GAME="fivem"
+# txAdmin Environment Variables (TXHOST format per v8.0.0 documentation)
+# https://github.com/citizenfx/txAdmin/blob/master/docs/env-config.md
 
-echo "* txAdmin Port: ${TXHOST_PORT}"
-echo "* Game Port: ${TXHOST_FXSERVER_PORT}"
+# General
+export TXHOST_DATA_PATH="/home/container"
+export TXHOST_GAME_NAME="fivem"
+export TXHOST_QUIET_MODE="${TXADMIN_QUIET_MODE:-false}"
+
+# Enforce max slots if set
+if [ -n "${MAX_PLAYERS}" ]; then
+    export TXHOST_MAX_SLOTS="${MAX_PLAYERS}"
+fi
+
+# Networking
+export TXHOST_TXA_PORT="${TXADMIN_PORT:-40120}"
+export TXHOST_INTERFACE="${TXADMIN_INTERFACE:-0.0.0.0}"
+export TXHOST_FXS_PORT="${SERVER_PORT:-30120}"
+export TXHOST_TXA_URL="http://${SERVER_IP}:${TXADMIN_PORT:-40120}"
+
+# Provider (GSP branding)
+export TXHOST_PROVIDER_NAME="${TXADMIN_PROVIDER_NAME:-Pterodactyl}"
+if [ -n "${TXADMIN_PROVIDER_LOGO}" ]; then
+    export TXHOST_PROVIDER_LOGO="${TXADMIN_PROVIDER_LOGO}"
+fi
+
+# Deployer defaults (auto-fill during setup)
+if [ -n "${CFX_LICENSE_KEY}" ] && [ "${CFX_LICENSE_KEY}" != "changeme" ]; then
+    export TXHOST_DEFAULT_CFXKEY="${CFX_LICENSE_KEY}"
+fi
+
+# Silence deprecated config warnings
+export TXHOST_IGNORE_DEPRECATED_CONFIGS="true"
+
+echo "* txAdmin Port: ${TXHOST_TXA_PORT}"
+echo "* Game Port: ${TXHOST_FXS_PORT}"
 
 # Auto-Update Artifacts
 if [ "${AUTO_UPDATE_ARTIFACTS}" == "1" ]; then
