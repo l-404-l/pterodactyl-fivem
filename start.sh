@@ -1,54 +1,106 @@
 #!/bin/bash
-## Make Colorful text for the console
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
-BLUE='\033[0;34m'
+# FiveM Startup Script for Pterodactyl
+# This script handles txAdmin environment setup, auto-updates, and server launch
 
-Text="${GREEN}[STARTUP]${NC}"
+set -e
 
-echo -e "${Text} ${BLUE}Starting checks for all updates...${NC}"
-RELEASE_PAGE=$(curl -sSL https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/)
-CHANGELOGS_PAGE=$(curl -sSL https://changelogs-live.fivem.net/api/changelog/versions/linux/server)
+echo "=================================================="
+echo "   FiveM Server Startup"
+echo "=================================================="
+echo ""
 
-if [[ "${AUTO_UPDATE}" == "1" ]]; then
-    DOWNLOAD_LINK=$(echo $CHANGELOGS_PAGE | jq -r '.latest_download')
-
-    rm -rf /home/container/alpine > /dev/null 2>&1
-
-    echo -e "${Text} ${BLUE}Updating CitizenFX Resource Files...${NC}"
-
-    curl -sSL ${DOWNLOAD_LINK} -o ${DOWNLOAD_LINK##*/} > /dev/null 2>&1
-    tar -xvf ${DOWNLOAD_LINK##*/} > /dev/null 2>&1
-    rm -rf ${DOWNLOAD_LINK##*/} run.sh > /dev/null 2>&1
-
-    echo -e "${Text} ${BLUE}CitizenFX Resources updated successfully!${NC}"
-else 
-    echo -e "${Text} ${BLUE}Auto Update is disabled!${NC}"
+# Set timezone
+if [ -n "${TIMEZONE}" ]; then
+    export TZ="${TIMEZONE}"
+    echo "* Timezone: ${TZ}"
 fi
 
-echo -e "${Text} ${BLUE}Starting FiveM Server...${NC}"
+# txAdmin Environment Variables (new TXHOST format)
+export TXHOST_DATA_PATH="/home/container"
+export TXHOST_PORT="${TXADMIN_PORT:-40120}"
+export TXHOST_INTERFACE="${TXADMIN_INTERFACE:-0.0.0.0}"
+export TXHOST_FXSERVER_PORT="${SERVER_PORT:-30120}"
+export TXHOST_PUBLIC_URL="http://${SERVER_IP}:${TXADMIN_PORT:-40120}"
+export TXHOST_PROVIDER_NAME="${TXADMIN_PROVIDER_NAME:-Pterodactyl}"
+export TXHOST_PROVIDER_LOGO_URL="${TXADMIN_PROVIDER_LOGO}"
+export TXHOST_SERVER_GAME="fivem"
 
-# Export environment variables for txAdmin and FiveM server
-export TXHOST_DATA_PATH=/home/container/txData
-export TXHOST_MAX_SLOTS=${MAX_PLAYERS}
-export TXHOST_TXA_PORT=${TXADMIN_PORT}
-export TXHOST_FXS_PORT=${SERVER_PORT}
-export TXHOST_DEFAULT_CFXKEY=${FIVEM_LICENSE}
-export TXHOST_PROVIDER_NAME=${PROVIDER_NAME}
-export TXHOST_PROVIDER_LOGO=${PROVIDER_LOGO}
-export TXHOST_TXA_URL=${TXADMIN_URL}
-export TXHOST_INTERFACE=${TXHOST_IP}
+echo "* txAdmin Port: ${TXHOST_PORT}"
+echo "* Game Port: ${TXHOST_FXSERVER_PORT}"
 
-# Set the path to the correct binary location for the FiveM server
-SERVER_BIN_PATH="/home/container/alpine/opt/cfx-server/FXServer"
-
-# If the binary does not exist, print an error message
-if [ ! -f "$SERVER_BIN_PATH" ]; then
-    echo -e "${RED}[ERROR] FiveM server binary not found at ${SERVER_BIN_PATH}${NC}"
-    exit 1
+# Auto-Update Artifacts
+if [ "${AUTO_UPDATE_ARTIFACTS}" == "1" ]; then
+    echo ""
+    echo "[UPDATE] Checking for artifact updates..."
+    
+    if [ -f "alpine/opt/cfx-server/version" ]; then
+        CURRENT_VERSION=$(cat alpine/opt/cfx-server/version 2>/dev/null || echo "unknown")
+    else
+        CURRENT_VERSION="unknown"
+    fi
+    
+    echo "[UPDATE] Current version: ${CURRENT_VERSION}"
+    
+    CHANGELOGS_API="https://changelogs-live.fivem.net/api/changelog/versions/linux/server"
+    
+    case "${FIVEM_VERSION}" in
+        recommended|"")
+            TARGET_VERSION=$(curl -sSL ${CHANGELOGS_API} | jq -r '.recommended')
+            DOWNLOAD_LINK=$(curl -sSL ${CHANGELOGS_API} | jq -r '.recommended_download')
+            ;;
+        optional)
+            TARGET_VERSION=$(curl -sSL ${CHANGELOGS_API} | jq -r '.optional')
+            DOWNLOAD_LINK=$(curl -sSL ${CHANGELOGS_API} | jq -r '.optional_download')
+            ;;
+        latest)
+            TARGET_VERSION=$(curl -sSL ${CHANGELOGS_API} | jq -r '.latest')
+            DOWNLOAD_LINK=$(curl -sSL ${CHANGELOGS_API} | jq -r '.latest_download')
+            ;;
+        *)
+            echo "[UPDATE] Specific version pinned: ${FIVEM_VERSION} - skipping auto-update"
+            TARGET_VERSION="${FIVEM_VERSION}"
+            DOWNLOAD_LINK=""
+            ;;
+    esac
+    
+    if [ "${CURRENT_VERSION}" != "${TARGET_VERSION}" ] && [ -n "${DOWNLOAD_LINK}" ]; then
+        echo "[UPDATE] Update available: ${CURRENT_VERSION} -> ${TARGET_VERSION}"
+        echo "[UPDATE] Creating backup..."
+        mkdir -p backups
+        BACKUP_DIR="backups/artifacts_${CURRENT_VERSION}_$(date +%Y%m%d_%H%M%S)"
+        cp -r alpine "${BACKUP_DIR}" 2>/dev/null || true
+        echo "[UPDATE] Downloading new artifact..."
+        curl -sSL "${DOWNLOAD_LINK}" -o artifact.tar.xz --progress-bar
+        echo "[UPDATE] Extracting..."
+        tar xf artifact.tar.xz && rm -f artifact.tar.xz
+        echo "[UPDATE] ✓ Updated to ${TARGET_VERSION}"
+    else
+        echo "[UPDATE] ✓ Already on target version"
+    fi
 fi
 
-# Execute the server with txAdmin enabled
-echo -e "${Text} ${BLUE}Running the FiveM server with txAdmin...${NC}"
-$(pwd)/alpine/opt/cfx-server/ld-musl-x86_64.so.1 --library-path "$(pwd)/alpine/usr/lib/v8/:$(pwd)/alpine/lib/:$(pwd)/alpine/usr/lib/" -- $(pwd)/alpine/opt/cfx-server/FXServer +set citizen_dir $(pwd)/alpine/opt/cfx-server/citizen/ $( [ "$TXADMIN_ENABLE" == "1" ] || printf %s '+exec server.cfg' )
+echo ""
+echo "* Starting FXServer..."
+echo "=================================================="
+echo ""
+
+# Build startup command
+STARTUP_CMD="$(pwd)/alpine/opt/cfx-server/ld-musl-x86_64.so.1"
+STARTUP_CMD="${STARTUP_CMD} --library-path \"$(pwd)/alpine/usr/lib/v8/:$(pwd)/alpine/lib/:$(pwd)/alpine/usr/lib/\""
+STARTUP_CMD="${STARTUP_CMD} -- $(pwd)/alpine/opt/cfx-server/FXServer"
+STARTUP_CMD="${STARTUP_CMD} +set citizen_dir $(pwd)/alpine/opt/cfx-server/citizen/"
+STARTUP_CMD="${STARTUP_CMD} +set sv_licenseKey \"${CFX_LICENSE_KEY}\""
+STARTUP_CMD="${STARTUP_CMD} +set steam_webApiKey \"${STEAM_API_KEY}\""
+STARTUP_CMD="${STARTUP_CMD} +set sv_maxplayers ${MAX_PLAYERS}"
+STARTUP_CMD="${STARTUP_CMD} +set sv_hostname \"${SERVER_HOSTNAME}\""
+STARTUP_CMD="${STARTUP_CMD} +set serverProfile \"${TXADMIN_PROFILE}\""
+STARTUP_CMD="${STARTUP_CMD} +set onesync ${ONESYNC_ENABLED}"
+STARTUP_CMD="${STARTUP_CMD} +set sv_enforceGameBuild ${GAME_BUILD}"
+
+# Add +exec server.cfg only if txAdmin is disabled
+if [ "${TXADMIN_ENABLED}" != "1" ]; then
+    STARTUP_CMD="${STARTUP_CMD} +exec server.cfg"
+fi
+
+# Execute the server
+eval ${STARTUP_CMD}
