@@ -121,5 +121,10 @@ STARTUP_CMD="${STARTUP_CMD} +set serverProfile \"${TXADMIN_PROFILE}\""
 STARTUP_CMD="${STARTUP_CMD} +set onesync ${ONESYNC_ENABLED}"
 STARTUP_CMD="${STARTUP_CMD} +set sv_enforceGameBuild ${GAME_BUILD}"
 
+# Add +exec server.cfg only if txAdmin is disabled
+if [ "${TXADMIN_ENABLED}" != "1" ]; then
+    STARTUP_CMD="${STARTUP_CMD} +exec server.cfg"
+fi
+
 # Execute the server
 eval ${STARTUP_CMD}
