@@ -1,31 +1,41 @@
 FROM debian:bookworm-slim
 
-LABEL org.opencontainers.image.source https://github.com/l-404-l/pterodactyl-fivem
+LABEL author="Four" maintainer="https://github.com/l-404-l"
+LABEL org.opencontainers.image.source="https://github.com/l-404-l/pterodactyl-fivem"
+LABEL org.opencontainers.image.description="FiveM Pterodactyl Egg Docker Image with txAdmin Support"
 
-ENV TZ=${TZ}
+# Environment
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt upgrade -y && apt-get install -y \
-    build-essential \
-    curl \
-    git \
-    libssl-dev \
-    pkg-config \
+# Install all dependencies for FiveM
+RUN apt-get update && apt-get install -y --no-install-recommends \
     tar \
+    xz-utils \
+    curl \
     jq \
-    procps \
-    liblua5.3-0 \
-    libz-dev \
+    git \
+    file \
     tzdata \
-    && ln -sf /usr/share/zoneinfo/$TZ /etc/localtime \
-    && echo $TZ > /etc/timezone \
-    && rm -rf /var/lib/apt/lists/*
+    ca-certificates \
+    locales \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-RUN useradd -m -d /home/container container
+# Configure locale for proper character encoding
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
+ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
-USER        container
-ENV         USER=container HOME=/home/container
-WORKDIR     /home/container
+# Create Pterodactyl container user
+RUN useradd -m -d /home/container -s /bin/bash container
 
-COPY        ./entrypoint.sh /entrypoint.sh
-COPY        --chmod=777 ./start.sh /start.sh
-CMD         [ "/bin/bash", "/entrypoint.sh" ]
+# Set up the container user environment
+USER container
+ENV HOME=/home/container USER=container
+WORKDIR /home/container
+
+# Copy entrypoint script
+COPY --chown=container:container entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD ["/bin/bash", "/entrypoint.sh"]
